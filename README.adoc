@@ -1,0 +1,2 @@
+== Kafka Source
+This is a WIP exploring how to create a riff event-source connected to an external Kafka broker
