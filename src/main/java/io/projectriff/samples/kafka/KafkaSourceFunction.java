@@ -43,9 +43,9 @@ public class KafkaSourceFunction implements Supplier<Flux<ConsumerRecord>> {
 
 	@KafkaListener(topics = "${kafka.topics}")
 	public void listen(ConsumerRecord<?, ?> cr) throws Exception {
-		if (logger.isDebugEnabled()) {
-			logger.debug("Received Message:" + cr.toString());
-		}
+
+		logger.info("Received Message:" + cr.toString());
+
 		consumerRecords.onNext(cr);
 	}
 }

@@ -30,7 +30,7 @@ public class KafkaSourceApplicationTests {
 	private Supplier<Flux<ConsumerRecord>> consumerRecords;
 
 	@Test
-	@Ignore
+	//@Ignore
 	public void contextLoads() throws InterruptedException {
 		consumerRecords.get().subscribe(cr -> System.out.println("got:" + cr.toString()));
 		Thread.sleep(5000);
