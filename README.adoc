@@ -26,6 +26,9 @@ $ helm install projectriff/riff --name projectriff --devel --namespace riff-syst
 
 Update `spring.kafka.bootstrap-servers` in `application.properties` to use the kafka IP.
 
+```
+$ ./mvnw clean package
+```
 
 Run a docker build and deploy resources. This creates the riff topics and a deployment that is similar to what the
 function controller would build, including the sidecar container, etc.
@@ -112,3 +115,22 @@ $ kubectl logs -l function=kafka-source -c main indicates the function is receiv
 
 The message `{"prefetch":256,"autoCancel":true,"subscribers":[],"wip":0,"sourceMode":0,"done":false}` is emitted to
 the `events` topic whenever the pod is restarted, e.g., `$ kubectl delete pod -l function=kafka-source`
+
+If I create new messages before the pod is running, e.g.,
+
+```
+$ kubectl delete deploy -l function=kafka-source
+$ mc cp pom.xml myminio/foobar
+$ mc cp pom.xml myminio/foobar
+$ kubectl apply -f deploy.yaml
+```
+
+I get:
+
+```
+Caused by: java.lang.IllegalStateException: Cannot convert from class org.apache.kafka.clients.consumer.ConsumerRecord
+	at io.projectriff.invoker.JavaFunctionInvokerServer.toBytes(JavaFunctionInvokerServer.java:170) ~[app/:na]
+	at io.projectriff.invoker.JavaFunctionInvokerServer.payloadToBytes(JavaFunctionInvokerServer.java:155) ~[app/:na]
+	at io.projectriff.invoker.JavaFunctionInvokerServer.lambda$call$12(JavaFunctionInvokerServer.java:117) ~[app/:na]
+	at reactor.core.publisher.LambdaSubscriber.onNext(LambdaSubscriber.java:130) ~[reactor-core-3.2.0.M1.jar:3.2.0.M1]
+```
