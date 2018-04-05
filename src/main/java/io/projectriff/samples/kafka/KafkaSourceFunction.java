@@ -21,31 +21,32 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 
-import java.util.function.Supplier;
+import java.util.function.Function;
 
 /**
  * @author David Turanski
+ * @author Thomas Risberg
  **/
 @Component
-public class KafkaSourceFunction implements Supplier<Flux<ConsumerRecord>> {
+public class KafkaSourceFunction implements Function<Flux<String>, Flux<String>> {
 
 	public static Logger logger = LoggerFactory.getLogger(KafkaSourceFunction.class);
 
-	EmitterProcessor<ConsumerRecord> consumerRecords = EmitterProcessor.create();
+	EmitterProcessor<String> consumerRecords = EmitterProcessor.create();
 
 	@Override
-	public Flux<ConsumerRecord> get() {
+	public Flux<String> apply(Flux<String> stringFlux) {
 		return consumerRecords;
 	}
 
 	@KafkaListener(topics = "${kafka.topics}")
 	public void listen(ConsumerRecord<?, ?> cr) throws Exception {
-
-		logger.info("Received Message:" + cr.toString());
-
-		consumerRecords.onNext(cr);
+		logger.info("Message Recieved: " + cr.value());
+		consumerRecords.onNext(cr.value().toString());
 	}
+
 }

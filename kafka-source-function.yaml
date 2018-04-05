@@ -1,0 +1,14 @@
+---
+apiVersion: projectriff.io/v1alpha1
+kind: Function
+metadata:
+  name: kafka-source
+spec:
+  container:
+    image: trisberg/kafka-source:0.0.1
+  minReplicas: 1
+  maxReplicas: 1
+  idleTimeoutMs: 3600000
+  input: start
+  output: events
+  protocol: grpc

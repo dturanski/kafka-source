@@ -1,11 +1,11 @@
 ---
-apiVersion: projectriff.io/v1
+apiVersion: projectriff.io/v1alpha1
 kind: Topic
 metadata:
-  name: kafka-source
+  name: start
 
 ---
-apiVersion: projectriff.io/v1
+apiVersion: projectriff.io/v1alpha1
 kind: Topic
 metadata:
   name: events

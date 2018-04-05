@@ -1,43 +1,25 @@
 == Kafka Source
+
 This is a WIP exploring how to create a riff event-source connected to an external Kafka broker
 
+NOTE: Tested on Docker for Mac (edge channel) with Kubernetes enabled
 
-== Integration Testing
-
-Install a separate Kafka broker the riff helm chart for kafka:
+== Install riff:
 
 ```
-$cd ~/go/src/github.com/projectriff/riff
-$helm install helm-charts/kafka --name external
+$ helm install projectriff/riff --name projectriff --devel --namespace riff-system --set kafka.create=true --set rbac.create=false --set httpGateway.service.type=NodePort
 ```
 
-Get the kafka host IP:
+== Install a separate Kafka broker using the riff helm chart for kafka:
+
+```
+$ helm install projectriff/kafka --name external
+```
+
+Get the external kafka host IP:
 
 ```
 docker ps -f name=k8s_kafka_external-kafka* -q | xargs docker inspect | grep ADVERTISED
-```
-
-Install riff:
-
-```
-$ helm install projectriff/riff --name projectriff --devel --namespace riff-system --set kafka.create=true --set rbac
-.create=false --set httpGateway.service.type=NodePort
-```
-
-Update `spring.kafka.bootstrap-servers` in `application.properties` to use the kafka IP.
-
-```
-$ ./mvnw clean package
-```
-
-Run a docker build and deploy resources. This creates the riff topics and a deployment that is similar to what the
-function controller would build, including the sidecar container, etc.
-
-```
-$ cd <this project root>
-$ riff build
-$ kubectl apply -f kafka-source-topics.yaml
-$ kubectl apply -f deploy.yaml
 ```
 
 == Using minio to produce messages
@@ -55,8 +37,7 @@ The initial run will create credentials a `config.json` in `/mnt/config`.  It wi
 mc config host add myminio http://172.17.0.2:9000 6225PS5P2A3OVKPA6H0J W9TdOPYjeAEmdxLlK88BExK0u8FqxxDUi1YleWaw
 ```
 
-Use `localhost:9000` instead if you installed `mc` locally.  Edit `/mnt/data/config.json` to enable Kafka
-notifications. Edit generated "kafka" entry, using the kafka host IP.
+Edit `/mnt/data/config.json` to enable Kafka notifications. Edit generated "kafka" entry, using the kafka host IP.
 
 ```
 "kafka": {
@@ -95,42 +76,28 @@ The subscription is for any object event in the bucket. Generate messages to the
 $ mc cp pom.xml myminio/foobar
 ```
 
-
-== Current issues
-
-```
-$ kubectl logs -l function=kafka-source -c sidecar
-2018/03/31 19:09:10 Sidecar for function 'kafka-source' (kafka-source->events) using grpc dispatcher starting
-2018/03/31 19:09:11 Rebalanced: &{Type:rebalance start Claimed:map[] Released:map[] Current:map[]}
-2018/03/31 19:09:11 Rebalanced: &{Type:rebalance OK Claimed:map[kafka-source:[0]] Released:map[] Current:map[kafka-source:[0]]}
-2018/03/31 19:09:15 <<< Message{{"prefetch":256,"autoCancel":true,"subscribers":[],"wip":0,"sourceMode":0,"done":false}, map[timestamp:[1522523355889]]}
-2018/03/31 19:09:15 Stream to function has closed
-```
-
-meanwhile...
+== Build and deploy function
 
 ```
-$ kubectl logs -l function=kafka-source -c main indicates the function is receiving messages
+$ ./mvnw clean package
+$ riff build
+$ riff apply
 ```
 
-The message `{"prefetch":256,"autoCancel":true,"subscribers":[],"wip":0,"sourceMode":0,"done":false}` is emitted to
-the `events` topic whenever the pod is restarted, e.g., `$ kubectl delete pod -l function=kafka-source`
-
-If I create new messages before the pod is running, e.g.,
+== Scale to one instance and test
 
 ```
-$ kubectl delete deploy -l function=kafka-source
+$ kubectl scale deployment kafka-source --replicas=1
+```
+
+Then copy something to the bucket
+
+```
 $ mc cp pom.xml myminio/foobar
-$ mc cp pom.xml myminio/foobar
-$ kubectl apply -f deploy.yaml
 ```
 
-I get:
+You can use the riff provided `topics` command to tail the events
 
 ```
-Caused by: java.lang.IllegalStateException: Cannot convert from class org.apache.kafka.clients.consumer.ConsumerRecord
-	at io.projectriff.invoker.JavaFunctionInvokerServer.toBytes(JavaFunctionInvokerServer.java:170) ~[app/:na]
-	at io.projectriff.invoker.JavaFunctionInvokerServer.payloadToBytes(JavaFunctionInvokerServer.java:155) ~[app/:na]
-	at io.projectriff.invoker.JavaFunctionInvokerServer.lambda$call$12(JavaFunctionInvokerServer.java:117) ~[app/:na]
-	at reactor.core.publisher.LambdaSubscriber.onNext(LambdaSubscriber.java:130) ~[reactor-core-3.2.0.M1.jar:3.2.0.M1]
+$ topics tail -n events
 ```
